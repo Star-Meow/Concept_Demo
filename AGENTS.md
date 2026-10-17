@@ -2,6 +2,8 @@
 
 本專案（Concept_Demo）唯一的規則來源。所有代理與協作者以本文件為準；新增或修改規則時，直接更新本文件。
 
+`CLAUDE.md` 只能有一行 `@AGENTS.md` 引用本文件，不得寫入其他規則；其他工具的設定檔也一樣，只能引用本文件。
+
 ## 專案概況
 
 - 引擎：Unity 6000.3.26f1（URP）
@@ -21,13 +23,20 @@
 - `Assets/`（含所有 `.meta` 檔，`.meta` 必須和對應的資源一起提交）
 - `Packages/manifest.json`、`Packages/packages-lock.json`
 - `ProjectSettings/`
-- 根目錄設定檔：`.gitignore`、`.gitattributes`、`.vsconfig`、`.mcp.json`、`AGENTS.md`
+- 根目錄設定檔：`.gitignore`、`.gitattributes`、`.vsconfig`、`.mcp.json`
+- 文件：`AGENTS.md`、`CLAUDE.md`、`README.md`，以及之後新增的文件（統一放在 `Docs/`）。專案的環境、設定或結構有變動時，同步更新 `README.md`。
 
 不納入 git（由 `.gitignore` 過濾）：
 
 - Unity 產生的目錄：`Library/`、`Temp/`、`Logs/`、`UserSettings/`、`obj/`、`Build/`
 - IDE 自動產生的檔案：`*.csproj`、`*.sln`、`*.slnx`、`.vs/`、`.idea/`
 - 作業系統雜檔、個人或本機設定、建置輸出
+
+## 一般原則
+
+- 沒有特別規定的事項，比照一般 Unity 專案的慣例處理。
+- 發現問題或跟慣例有衝突時，先向使用者提出，不要自行決定。
+- 金鑰、密碼、keystore、`.env` 一律不提交。Unity Cloud 專案 ID 和組織 ID 依一般慣例跟著 `ProjectSettings/` 提交，不另外排除。
 
 ## Unity 操作
 
