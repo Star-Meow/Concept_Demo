@@ -27,8 +27,27 @@
 ## 需求文件
 
 - 需求文件放在 `Docs/Requirements/`，檔名為 `REQ-<三位數編號>-<英文短名>.md`，用 `_TEMPLATE.md` 開始寫。
-- 狀態變成「確認」才開始實作；實作完成、驗收條件全部打勾後，狀態改為「完成」，並同步更新 `Docs/Requirements/README.md` 的需求清單。
+- 狀態變成「確認」才開始實作。
+- 驗收流程：
+  1. 實作完成後，先執行單元測試（`Tests/EditMode/`，必要時加上 Play Mode 測試），全部通過才能進入下一步。測試沒通過時回報失敗內容，不得交付驗收。
+  2. 提供一份文字總結給使用者確認，內容包含：
+     - 這次實作了什麼、改了哪些檔案
+     - 單元測試結果（執行了哪些測試、通過與失敗數量）
+     - 每一項驗收條件的驗證方式與結果，無法用測試驗證的項目要說明怎麼確認
+     - 尚未完成、未驗證或已知的問題
+  3. 使用者確認總結後才算通過驗收。
+- 通過驗收後，狀態才能改為「完成」，並同步更新 `Docs/Requirements/README.md` 的需求清單。
 - 實作時發現需求不清楚或互相矛盾，先向使用者提出，不要自行假設。
+
+## GitHub 協作
+
+- 在 issue、PR 的描述或 comment 裡提到檔案時，直接附上可點擊的連結，例如 `[AGENTS.md](https://github.com/Star-Meow/Concept_Demo/blob/main/AGENTS.md)`，不要只寫路徑。
+- 引用程式碼時，使用固定在 commit 的 permalink 加上行號，例如 `https://github.com/Star-Meow/Concept_Demo/blob/<sha>/Assets/_Project/Scripts/Runtime/Foo.cs#L60-L68`。
+  - `<sha>` 用完整的 commit SHA，不要用 `main` 等分支名稱，避免之後檔案變動導致行號對不上。
+  - permalink 單獨放一行，GitHub 才會展開成程式碼片段，審閱者不用自己翻 repo。這只對同一個 repo 的程式碼有效。
+- 被指出格式問題時，直接原地編輯那則 comment，不另外發新的 comment 修正。
+- issue 裡的驗收 checkbox 不要自己打勾，留給使用者（審閱者）勾選。
+- `README.md` 只寫專案本身的內容（環境、取得與設定、結構）；協作與格式規範一律寫在本文件。
 
 ## 版本控制範圍
 
