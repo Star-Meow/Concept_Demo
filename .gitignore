@@ -112,3 +112,51 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# ---------------------------------------------------------------
+# Project additions
+# ---------------------------------------------------------------
+
+# Additional build outputs
+*.ipa
+*.exe
+*.dll.mdb
+/[Bb]uild[Rr]eports/
+
+# JetBrains Rider / IntelliJ
+.idea/
+
+# VS Code (keep shared settings only)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Editor swap / backup files
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# AI agent local files (AGENTS.md and .mcp.json are tracked)
+.claude/settings.local.json
+.claude/worktrees/
+CLAUDE.local.md
+
+# Local environment / secrets
+.env
+.env.*
+*.keystore
+*.jks
