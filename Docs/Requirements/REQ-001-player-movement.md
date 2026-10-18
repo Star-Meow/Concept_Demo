@@ -112,6 +112,8 @@ Prototype01
 18. [MCP] 空中按住反方向：水平速度越過 0 之前面向不變，越過後才轉向。
 19. [MCP] 移動中翻滾：翻滾結束後水平速度 ≈ 翻滾前速度（±0.1）；靜止翻滾：結束後水平速度為 0。
 20. [測試] `HorizontalMotion` 單元測試：加速、減速、反向煞車、不超過目標速度、空中面向於速度越過 0 才轉。
+21. [測試] `ScriptedPlayerInput` 單元測試：移動方向照設定回傳；Jump、Roll 按下只在下一次讀取回報一次。
+22. [人工] 鍵盤按鍵綁定（`A`/`D`、方向鍵、`Space`、`Shift`）由使用者在 Play Mode 試玩確認。
 
 ## 範圍外
 
@@ -152,7 +154,9 @@ Prototype01
 - 驗收 6「放開 0.5 s 後再按維持 Walk」只判定再次按下後 0.25 s 內的狀態（持續按住 0.3 s 後會因「按住」條件進入 Sprint）。
 - 專案範本內既有的 `Assets/Settings/InputSystem_Actions.inputactions` 不使用也不刪除；輸入以程式內建立的 `InputAction` 處理。
 - Debug HUD 以 OnGUI 實作。
-- Play Mode 量測使用提交到 `Scripts/Editor/` 的量測工具，以 Input System 送入鍵盤事件並逐幀記錄角色狀態。Editor 未聚焦時可能降頻，量測結果會附上取樣間隔。
+- 輸入來源抽象化：`PlayerController` 透過介面 `IPlayerInputSource` 讀取輸入（移動方向、Jump 按下、Roll 按下），預設實作 `InputSystemPlayerInput`（程式內建立的 `InputAction`），可用 `SetInputSource` 換成 `ScriptedPlayerInput`（由程式指定輸入）。
+- Play Mode 量測使用提交到 `Scripts/Editor/` 的量測工具 `MovementProbe`：依時間軸透過 `ScriptedPlayerInput` 送入輸入，逐幀記錄角色狀態到 `Temp/MovementProbe/*.csv`。量測期間把 `Time.captureFramerate` 設為 50（每幀固定 0.02 s，與物理步長一致）並開啟 `Application.runInBackground`，Editor 沒有焦點時時序也精確；結束後還原。兩者都只在該次 Play Mode 生效，不寫入專案設定。
+- 實測發現：Editor 沒有焦點時，以 Input System 佇列送入的鍵盤事件不會傳到遊戲內的 `InputAction`，所以量測改用上述輸入來源抽象，按鍵綁定本身由使用者試玩確認。
 
 **2026-10-18 需求變更（實作中，使用者提出）**
 
