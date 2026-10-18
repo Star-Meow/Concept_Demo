@@ -124,6 +124,10 @@ MonoBehaviour:
   _settings:
     _walkSpeed: 6
     _axisDeadzone: 0.5
+    _groundAcceleration: 40
+    _groundDeceleration: 50
+    _airAcceleration: 20
+    _airDeceleration: 2
     _sprintSpeed: 10
     _sprintHoldTime: 0.3
     _doubleTapWindow: 0.3
@@ -132,7 +136,7 @@ MonoBehaviour:
     _jumpBufferTime: 0.1
     _fallGravityMultiplier: 1.3
     _gravityScale: 3
-    _rollDistanceInBodyWidths: 2
+    _rollDistanceInBodyWidths: 4
     _rollDuration: 0.3
     _rollCooldown: 0.3
     _killY: -8

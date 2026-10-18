@@ -48,6 +48,7 @@ namespace ConceptDemo.Player
 
         private readonly RollMotion _roll = new RollMotion();
         private SprintIntentDetector _sprint;
+        private HorizontalMotion _horizontal;
 
         private Vector2 _fallbackSpawnPosition;
         private int _moveInput;
@@ -59,6 +60,8 @@ namespace ConceptDemo.Player
         private bool _hasGroundJump;
         private float _rollCooldownEndTime;
         private int _rollDirection = 1;
+        private float _rollExitVelocity;
+        private bool _hasRollExitVelocity;
 
         public PlayerMovementSettings Settings => _settings;
         public PlayerState State { get; private set; } = PlayerState.Idle;
@@ -77,6 +80,11 @@ namespace ConceptDemo.Player
             _collider = GetComponent<BoxCollider2D>();
             _rigidbody.gravityScale = _settings.GravityScale;
             _sprint = new SprintIntentDetector(_settings.SprintHoldTime, _settings.DoubleTapWindow);
+            _horizontal = new HorizontalMotion(
+                _settings.GroundAcceleration,
+                _settings.GroundDeceleration,
+                _settings.AirAcceleration,
+                _settings.AirDeceleration);
             _fallbackSpawnPosition = _rigidbody.position;
             CreateInputActions();
         }
@@ -192,11 +200,18 @@ namespace ConceptDemo.Player
 
             if (!rolledThisStep)
             {
-                velocity = ApplyMoveAndJump(now, velocity);
+                if (_hasRollExitVelocity)
+                {
+                    velocity.x = _rollExitVelocity;
+                    _hasRollExitVelocity = false;
+                }
+
+                float speedBeforeMove = velocity.x;
+                velocity = ApplyMoveAndJump(now, velocity, deltaTime);
 
                 if (rollPressed && CanRoll(now))
                 {
-                    StartRoll();
+                    StartRoll(speedBeforeMove);
                     velocity.x = _roll.Tick(deltaTime);
                 }
             }
@@ -210,15 +225,16 @@ namespace ConceptDemo.Player
             UpdatePresentation(velocity);
         }
 
-        private Vector2 ApplyMoveAndJump(float now, Vector2 velocity)
+        private Vector2 ApplyMoveAndJump(float now, Vector2 velocity, float deltaTime)
         {
-            if (_moveInput != 0)
-            {
-                Facing = _moveInput;
-            }
-
             float speed = _sprint.IsSprinting ? _settings.SprintSpeed : _settings.WalkSpeed;
-            velocity.x = _moveInput * speed;
+            _horizontal.Configure(
+                _settings.GroundAcceleration,
+                _settings.GroundDeceleration,
+                _settings.AirAcceleration,
+                _settings.AirDeceleration);
+            velocity.x = _horizontal.Step(velocity.x, _moveInput, speed, IsGrounded, deltaTime);
+            Facing = HorizontalMotion.ResolveFacing(Facing, _moveInput, velocity.x, IsGrounded);
 
             bool buffered = now - _lastJumpPressedTime <= _settings.JumpBufferTime;
             bool inCoyote = now - _lastGroundedTime <= _settings.CoyoteTime;
@@ -277,9 +293,13 @@ namespace ConceptDemo.Player
             return IsGrounded && !_roll.IsActive && now >= _rollCooldownEndTime;
         }
 
-        private void StartRoll()
+        private void StartRoll(float speedBeforeRoll)
         {
             _rollDirection = Facing;
+            // 靜止開始的翻滾結束後停下；移動中開始的翻滾結束後恢復原本的速度大小。
+            float speed = Mathf.Abs(speedBeforeRoll);
+            _rollExitVelocity = speed < MovingThreshold ? 0f : speed * _rollDirection;
+            _hasRollExitVelocity = false;
             _sprint.Reset();
             _lastJumpPressedTime = float.NegativeInfinity;
             _roll.Begin(_rollDirection, _settings.RollDistanceInBodyWidths * ColliderWidth, _settings.RollDuration);
@@ -291,6 +311,9 @@ namespace ConceptDemo.Player
             _rollCooldownEndTime = now + _settings.RollCooldown;
             _sprint.Reset();
             ResetVisualRotation();
+
+            // 翻滾最後一步的速度仍要用來補齊距離，恢復速度在下一次非翻滾的移動前套用。
+            _hasRollExitVelocity = true;
         }
 
         /// <summary>回到 SpawnPoint，並重置速度、狀態、面向、Roll 冷卻、Visual 旋轉與 Sprint 偵測器。</summary>
@@ -303,6 +326,7 @@ namespace ConceptDemo.Player
             _rigidbody.gravityScale = _settings.GravityScale;
 
             _roll.Cancel();
+            _hasRollExitVelocity = false;
             _rollCooldownEndTime = 0f;
             _sprint.Reset();
             ResetVisualRotation();

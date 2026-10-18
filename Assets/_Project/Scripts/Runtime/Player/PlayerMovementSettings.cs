@@ -11,6 +11,15 @@ namespace ConceptDemo.Player
         [SerializeField, Min(0f)] private float _walkSpeed = 6f;
         [SerializeField, Min(0f)] private float _axisDeadzone = 0.5f;
 
+        [Header("Inertia")]
+        [SerializeField, Min(0f)] private float _groundAcceleration = 40f;
+        [Tooltip("地面減速與反向煞車")]
+        [SerializeField, Min(0f)] private float _groundDeceleration = 50f;
+        [Tooltip("空中有輸入時（含反向）")]
+        [SerializeField, Min(0f)] private float _airAcceleration = 20f;
+        [Tooltip("空中沒有輸入時")]
+        [SerializeField, Min(0f)] private float _airDeceleration = 2f;
+
         [Header("Sprint")]
         [SerializeField, Min(0f)] private float _sprintSpeed = 10f;
         [SerializeField, Min(0f)] private float _sprintHoldTime = 0.3f;
@@ -26,7 +35,7 @@ namespace ConceptDemo.Player
         [SerializeField, Min(0f)] private float _gravityScale = 3f;
 
         [Header("Roll")]
-        [SerializeField, Min(0f)] private float _rollDistanceInBodyWidths = 2f;
+        [SerializeField, Min(0f)] private float _rollDistanceInBodyWidths = 4f;
         [SerializeField, Range(0.05f, RollMotion.MaxDuration)] private float _rollDuration = 0.3f;
         [SerializeField, Min(0f)] private float _rollCooldown = 0.3f;
 
@@ -36,6 +45,10 @@ namespace ConceptDemo.Player
 
         public float WalkSpeed => _walkSpeed;
         public float AxisDeadzone => _axisDeadzone;
+        public float GroundAcceleration => _groundAcceleration;
+        public float GroundDeceleration => _groundDeceleration;
+        public float AirAcceleration => _airAcceleration;
+        public float AirDeceleration => _airDeceleration;
         public float SprintSpeed => _sprintSpeed;
         public float SprintHoldTime => _sprintHoldTime;
         public float DoubleTapWindow => _doubleTapWindow;
