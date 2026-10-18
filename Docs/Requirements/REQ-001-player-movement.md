@@ -53,14 +53,18 @@ Prototype01
 
 ### 行為
 
-- **Move**：水平速度直接設定，反應即時。面向由最後一次非零輸入決定，初始朝右。
+- **Move**：水平速度帶慣性，以加速度趨近目標速度（輸入方向 × walkSpeed 或 sprintSpeed，沒有輸入時為 0），不會即停。
+  - 地面：加速用 `groundAcceleration`；減速與反向煞車用 `groundDeceleration`。
+  - 空中：有輸入時用 `airAcceleration`（含反向煞車）；沒有輸入時用 `airDeceleration`，幾乎保留起跳衝力。
+  - 面向：地面上由最後一次非零輸入決定；空中按反方向時可慢慢反向，水平速度越過 0 往輸入方向移動時才轉面向。初始朝右。
 - **Sprint（奔跑）**：符合任一條件即進入。
   - 按住：同方向連續按住 ≥ `sprintHoldTime`（預設 0.3 s）
   - 雙擊：放開後 `doubleTapWindow`（預設 0.3 s）內再按同方向
   - 放開或反向即結束。Roll 會中斷 Sprint，翻滾結束後需重新觸發。空中也可開始 Sprint。
 - **Jump**：單段跳，不做續力（沒有可變跳高）：觸發後不論按多久，最高點都是 `jumpHeight`（預設 3.0 = 平台頂面 2.7 + 0.3），程式依重力換算起跳速度。具備 coyote time 與 jump buffer，下落時重力加成。
-- **Roll（翻滾）**：往目前面向翻滾 2 個身體寬。
-  - 距離 = `rollDistanceInBodyWidths`（預設 2）× 碰撞框寬度，不寫死數字。
+- **Roll（翻滾）**：往目前面向翻滾 4 個身體寬。
+  - 距離 = `rollDistanceInBodyWidths`（預設 4）× 碰撞框寬度，不寫死數字；靜止或移動中開始都相同。
+  - 靜止開始（|水平速度| < 0.01）：翻滾結束後停下。移動中開始：翻滾結束（含滾出平台邊緣提前結束）時，水平速度恢復為翻滾前的速度大小、方向為翻滾方向，之後依慣性變化。
   - 時間：0.5 s 內完成（`rollDuration` 預設 0.3 s，上限 0.5 s），以固定速度位移。
   - 觸發條件：在地面、不在翻滾中、冷卻結束、狀態為 Idle / Walk / Sprint（站著不動也可觸發）。方向取面向，不取按住的方向。
   - 翻滾中忽略 Move 與 Jump 輸入。Visual 繞 Z 軸旋轉 360° 作為佔位表現（不做影格動畫），結束時精確還原；碰撞框大小不變。
@@ -74,12 +78,14 @@ Prototype01
 | 參數 | 預設 | 參數 | 預設 |
 | --- | --- | --- | --- |
 | walkSpeed | 6 | jumpBufferTime | 0.1 |
-| sprintSpeed | 10 | rollDistanceInBodyWidths | 2 |
+| sprintSpeed | 10 | rollDistanceInBodyWidths | 4 |
 | sprintHoldTime | 0.3 | rollDuration | 0.3（上限 0.5） |
 | doubleTapWindow | 0.3 | rollCooldown | 0.3 |
 | axisDeadzone | 0.5 | fallGravityMultiplier | 1.3 |
 | jumpHeight | 3.0 | Rigidbody2D Gravity Scale | 3 |
 | coyoteTime | 0.1 | killY | -8 |
+| groundAcceleration | 40 | groundDeceleration | 50 |
+| airAcceleration | 20 | airDeceleration | 2 |
 
 ## 驗收條件
 
@@ -90,18 +96,22 @@ Prototype01
 2. [MCP] 場景階層、Layer、Component 與「功能說明」的場景結構一致。
 3. [MCP] 角色出生在地面上，站穩不下沉、不抖動，`IsGrounded` 為 true。
 4. [測試] `SprintIntentDetector` 六個情境：按住不足 0.3 s 不算 Sprint；按住 ≥ 0.3 s 算；窗口內雙擊算；窗口外雙擊不算；反向結束；放開結束。
-5. [MCP] 按住 `D` 1.0 s：0.25 s 時仍為 Walk（速度 = `walkSpeed`），0.3～0.4 s 之間進入 Sprint，之後水平速度 = `sprintSpeed`。
+5. [MCP] 按住 `D` 1.0 s：0.25 s 時仍為 Walk（速度 = `walkSpeed`），0.3～0.4 s 之間進入 Sprint，進入後 0.15 s 內水平速度達到 `sprintSpeed`。
 6. [MCP] 雙擊（按住 0.05 s、放開 0.1 s、再按下）：第二次按下立即進入 Sprint；放開 0.5 s 後再按則維持 Walk。
 7. [MCP] 完整按住 Jump 與 0.1 s 輕點的最高點相同（差距 < 0.05），且最高點離起跳點約 3.0；回報兩者的最高點數值。
 8. [MCP] 跳上平台：角色站在離平台邊緣約 2.5 單位的地面，朝平台按住方向並完整按住 Jump，落在平台頂面站穩（`IsGrounded` 為 true），可在平台上左右移動；左、右平台各驗證一次。另回報可成功跳上的起跳距離範圍（以 0.5 單位為間隔掃描，資訊項，不判定通過或失敗）。
 9. [測試] `RollMotion` 單元測試：位移 = `rollDistanceInBodyWidths` × 碰撞框寬度（誤差 ±0.01）；總時間 ≤ 0.5 s；速度方向跟隨面向；結束後不再作用；中途取消會停止作用。
-10. [MCP] 面向右、站著不動按 Shift：位移約 2 個身體寬，即 1 單位（誤差 ±0.1 單位）、歷時 ≤ 0.5 s，結束後 Visual 旋轉回到 0，狀態回到 Idle。
+10. [MCP] 面向右、站著不動按 Shift：位移約 4 個身體寬，即 2 單位（誤差 ±0.1 單位）、歷時 ≤ 0.5 s，結束後 Visual 旋轉回到 0，狀態回到 Idle。
 11. [MCP] 面向左按 Shift：往左位移相同距離。
 12. [MCP] 空中按 Shift 無效；翻滾中再按無效；冷卻期間按無效。
 13. [MCP] 在平台邊緣翻滾，滾出邊界時立即結束並進入 Fall，Visual 旋轉已還原，之後落回地面。
 14. [MCP] Respawn：把角色移到 `killY` 以下、走出地面端點墜落、掉入中間縫隙，三種情況都在 SpawnPoint 重生，狀態已重置。
 15. [MCP] 附 Game view 截圖：Idle、Sprint、Roll、跳躍最高點、站在平台上，五種狀態，HUD 清楚可見。
 16. [人工] 總結附上「全部可調數值」與對應實測結果的整合表（走路與 Sprint 速度、跳躍最高點、Roll 距離與時間、可跳上平台的距離範圍），由使用者在 Play Mode 親自試玩後決定要調整哪些數值。
+17. [MCP] 走路 1 s 後放開：0.2 s 內水平速度降到 0；回報滑行距離。
+18. [MCP] 空中按住反方向：水平速度越過 0 之前面向不變，越過後才轉向。
+19. [MCP] 移動中翻滾：翻滾結束後水平速度 ≈ 翻滾前速度（±0.1）；靜止翻滾：結束後水平速度為 0。
+20. [測試] `HorizontalMotion` 單元測試：加速、減速、反向煞車、不超過目標速度、空中面向於速度越過 0 才轉。
 
 ## 範圍外
 
@@ -151,8 +161,17 @@ Prototype01
 - 掉出畫面即重生：`killY` -10 → -8。
 - 驗收 2、7、8、10、14 隨之修改。
 
+**2026-10-18 需求變更二（實作中，使用者提出）**
+
+- 移動帶慣性（地面與空中），新增 `groundAcceleration`、`groundDeceleration`、`airAcceleration`、`airDeceleration`，手感取「輕微」。
+- 空中反向可慢慢反向，水平速度越過 0 才轉面向。
+- 翻滾距離固定；移動中翻滾結束後恢復翻滾前的速度，靜止翻滾結束後停下。
+- `rollDistanceInBodyWidths` 2 → 4（2 單位）。
+- 驗收 5、10 修改；新增驗收 17～20。純邏輯放在新的 plain C# 類別 `HorizontalMotion`。
+
 **已知事項（只回報，不修）**
 
-- Roll 1 單位 / 0.3 s ≈ 3.3 u/s，比走路（6）與 Sprint（10）都慢；若要更快，可把 `rollDuration` 縮短。
+- Roll 2 單位 / 0.3 s ≈ 6.7 u/s，略快於走路（6）、慢於 Sprint（10）。
+- Sprint 中翻滾，結束後恢復 10 u/s；但翻滾後需重新觸發 Sprint，仍按住方向時約 0.08 s 內降回走路速度 6，再按住 0.3 s 才會回到 Sprint。
 - 角色縮小但速度不變，畫面上約每秒 12 個身長，看起來會偏快。
 - 跳躍起跳速度約 13.3 u/s；以走路速度從離平台邊緣 2 單位處起跳，仍會輕微擦到平台側面，2.5 單位可避開。若出現貼著平台側面卡住的情況，回報即可。
