@@ -17,8 +17,8 @@ namespace ConceptDemo.Player
         [SerializeField, Min(0f)] private float _doubleTapWindow = 0.3f;
 
         [Header("Jump")]
-        [SerializeField, Min(0f)] private float _jumpVelocity = 14f;
-        [SerializeField, Range(0f, 1f)] private float _jumpCutMultiplier = 0.5f;
+        [Tooltip("固定的跳躍高度（最高點離起跳點的距離），不做續力")]
+        [SerializeField, Min(0f)] private float _jumpHeight = 3f;
         [SerializeField, Min(0f)] private float _coyoteTime = 0.1f;
         [SerializeField, Min(0f)] private float _jumpBufferTime = 0.1f;
         [SerializeField, Min(1f)] private float _fallGravityMultiplier = 1.3f;
@@ -31,15 +31,15 @@ namespace ConceptDemo.Player
         [SerializeField, Min(0f)] private float _rollCooldown = 0.3f;
 
         [Header("Respawn")]
-        [SerializeField] private float _killY = -10f;
+        [Tooltip("掉到這個高度以下就重生；預設為畫面底部再減一個身高")]
+        [SerializeField] private float _killY = -8f;
 
         public float WalkSpeed => _walkSpeed;
         public float AxisDeadzone => _axisDeadzone;
         public float SprintSpeed => _sprintSpeed;
         public float SprintHoldTime => _sprintHoldTime;
         public float DoubleTapWindow => _doubleTapWindow;
-        public float JumpVelocity => _jumpVelocity;
-        public float JumpCutMultiplier => _jumpCutMultiplier;
+        public float JumpHeight => _jumpHeight;
         public float CoyoteTime => _coyoteTime;
         public float JumpBufferTime => _jumpBufferTime;
         public float FallGravityMultiplier => _fallGravityMultiplier;

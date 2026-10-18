@@ -51,9 +51,7 @@ namespace ConceptDemo.Player
 
         private Vector2 _fallbackSpawnPosition;
         private int _moveInput;
-        private bool _jumpHeld;
         private bool _jumpPressedLatched;
-        private bool _jumpReleasedLatched;
         private bool _rollPressedLatched;
 
         private float _lastGroundedTime = float.NegativeInfinity;
@@ -133,15 +131,9 @@ namespace ConceptDemo.Player
             float axis = _moveAction.ReadValue<float>();
             _moveInput = Mathf.Abs(axis) >= _settings.AxisDeadzone ? (int)Mathf.Sign(axis) : 0;
 
-            _jumpHeld = _jumpAction.IsPressed();
             if (_jumpAction.WasPressedThisFrame())
             {
                 _jumpPressedLatched = true;
-            }
-
-            if (_jumpAction.WasReleasedThisFrame())
-            {
-                _jumpReleasedLatched = true;
             }
 
             if (_rollAction.WasPressedThisFrame())
@@ -172,7 +164,6 @@ namespace ConceptDemo.Player
             UpdateGrounded(now, velocity);
 
             bool jumpPressed = ConsumeLatch(ref _jumpPressedLatched);
-            bool jumpReleased = ConsumeLatch(ref _jumpReleasedLatched);
             bool rollPressed = ConsumeLatch(ref _rollPressedLatched);
 
             bool rolledThisStep = false;
@@ -201,7 +192,7 @@ namespace ConceptDemo.Player
 
             if (!rolledThisStep)
             {
-                velocity = ApplyMoveAndJump(now, velocity, jumpReleased);
+                velocity = ApplyMoveAndJump(now, velocity);
 
                 if (rollPressed && CanRoll(now))
                 {
@@ -219,7 +210,7 @@ namespace ConceptDemo.Player
             UpdatePresentation(velocity);
         }
 
-        private Vector2 ApplyMoveAndJump(float now, Vector2 velocity, bool jumpReleased)
+        private Vector2 ApplyMoveAndJump(float now, Vector2 velocity)
         {
             if (_moveInput != 0)
             {
@@ -233,23 +224,37 @@ namespace ConceptDemo.Player
             bool inCoyote = now - _lastGroundedTime <= _settings.CoyoteTime;
             if (buffered && inCoyote && _hasGroundJump)
             {
-                velocity.y = _settings.JumpVelocity;
+                velocity.y = JumpVelocity;
                 _lastJumpPressedTime = float.NegativeInfinity;
                 _hasGroundJump = false;
                 IsGrounded = false;
-
-                // 按下與放開落在同一步（或 buffer 期間已放開）時，直接套用可變跳高。
-                if (!_jumpHeld)
-                {
-                    velocity.y *= _settings.JumpCutMultiplier;
-                }
-            }
-            else if (jumpReleased && velocity.y > 0f && !IsGrounded)
-            {
-                velocity.y *= _settings.JumpCutMultiplier;
             }
 
             return velocity;
+        }
+
+        /// <summary>依固定跳躍高度換算的起跳速度。上升期間不套用下落重力加成。</summary>
+        public float JumpVelocity => GetJumpVelocity(
+            _settings.JumpHeight,
+            Mathf.Abs(Physics2D.gravity.y) * _settings.GravityScale,
+            Time.fixedDeltaTime);
+
+        /// <summary>
+        /// 讓最高點剛好在 jumpHeight 的起跳速度。
+        /// 物理引擎每個固定步長先更新速度再更新位置，最高點會比連續公式 v²/2g 少約 v·dt/2，
+        /// 所以解 v²/2g − v·dt/2 = h：v = g·dt/2 + sqrt((g·dt/2)² + 2gh)。
+        /// </summary>
+        public static float GetJumpVelocity(float jumpHeight, float gravity, float fixedDeltaTime)
+        {
+            gravity = Mathf.Max(0f, gravity);
+            jumpHeight = Mathf.Max(0f, jumpHeight);
+            if (jumpHeight <= 0f)
+            {
+                return 0f;
+            }
+
+            float halfStep = gravity * Mathf.Max(0f, fixedDeltaTime) * 0.5f;
+            return halfStep + Mathf.Sqrt(halfStep * halfStep + 2f * gravity * jumpHeight);
         }
 
         private void UpdateGrounded(float now, Vector2 velocity)
@@ -308,7 +313,6 @@ namespace ConceptDemo.Player
             _lastGroundedTime = float.NegativeInfinity;
             _lastJumpPressedTime = float.NegativeInfinity;
             _jumpPressedLatched = false;
-            _jumpReleasedLatched = false;
             _rollPressedLatched = false;
 
             State = PlayerState.Idle;
