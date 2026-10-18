@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace ConceptDemo.Player
 {
@@ -42,9 +41,8 @@ namespace ConceptDemo.Player
 
         private Rigidbody2D _rigidbody;
         private BoxCollider2D _collider;
-        private InputAction _moveAction;
-        private InputAction _jumpAction;
-        private InputAction _rollAction;
+        private InputSystemPlayerInput _defaultInput;
+        private IPlayerInputSource _inputSource;
 
         private readonly RollMotion _roll = new RollMotion();
         private SprintIntentDetector _sprint;
@@ -86,7 +84,8 @@ namespace ConceptDemo.Player
                 _settings.AirAcceleration,
                 _settings.AirDeceleration);
             _fallbackSpawnPosition = _rigidbody.position;
-            CreateInputActions();
+            _defaultInput = new InputSystemPlayerInput();
+            _inputSource = _defaultInput;
         }
 
         private void Start()
@@ -99,52 +98,37 @@ namespace ConceptDemo.Player
 
         private void OnEnable()
         {
-            _moveAction?.Enable();
-            _jumpAction?.Enable();
-            _rollAction?.Enable();
+            _defaultInput?.Enable();
         }
 
         private void OnDisable()
         {
-            _moveAction?.Disable();
-            _jumpAction?.Disable();
-            _rollAction?.Disable();
+            _defaultInput?.Disable();
         }
 
         private void OnDestroy()
         {
-            _moveAction?.Dispose();
-            _jumpAction?.Dispose();
-            _rollAction?.Dispose();
+            _defaultInput?.Dispose();
         }
 
-        private void CreateInputActions()
+        /// <summary>替換輸入來源；傳入 null 時回到預設的鍵盤輸入。</summary>
+        public void SetInputSource(IPlayerInputSource source)
         {
-            _moveAction = new InputAction("Move", InputActionType.Value);
-            _moveAction.AddCompositeBinding("1DAxis")
-                .With("Negative", "<Keyboard>/a")
-                .With("Positive", "<Keyboard>/d");
-            _moveAction.AddCompositeBinding("1DAxis")
-                .With("Negative", "<Keyboard>/leftArrow")
-                .With("Positive", "<Keyboard>/rightArrow");
-
-            _jumpAction = new InputAction("Jump", InputActionType.Button, "<Keyboard>/space");
-
-            _rollAction = new InputAction("Roll", InputActionType.Button, "<Keyboard>/leftShift");
-            _rollAction.AddBinding("<Keyboard>/rightShift");
+            _inputSource = source ?? _defaultInput;
         }
 
         private void Update()
         {
-            float axis = _moveAction.ReadValue<float>();
-            _moveInput = Mathf.Abs(axis) >= _settings.AxisDeadzone ? (int)Mathf.Sign(axis) : 0;
+            _defaultInput.AxisDeadzone = _settings.AxisDeadzone;
+            PlayerInputFrame input = _inputSource.Read();
+            _moveInput = input.MoveDirection;
 
-            if (_jumpAction.WasPressedThisFrame())
+            if (input.JumpPressed)
             {
                 _jumpPressedLatched = true;
             }
 
-            if (_rollAction.WasPressedThisFrame())
+            if (input.RollPressed)
             {
                 _rollPressedLatched = true;
             }
