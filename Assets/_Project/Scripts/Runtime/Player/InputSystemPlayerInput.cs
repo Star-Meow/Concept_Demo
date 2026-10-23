@@ -4,12 +4,13 @@ using UnityEngine.InputSystem;
 
 namespace ConceptDemo.Player
 {
-    /// <summary>預設的輸入來源：鍵盤，使用程式內建立的 InputAction（不建立 .inputactions 資產）。</summary>
+    /// <summary>預設的輸入來源：鍵盤與滑鼠，使用程式內建立的 InputAction（不建立 .inputactions 資產）。</summary>
     public class InputSystemPlayerInput : IPlayerInputSource, IDisposable
     {
         private readonly InputAction _moveAction;
         private readonly InputAction _jumpAction;
         private readonly InputAction _rollAction;
+        private readonly InputAction _attackAction;
 
         public InputSystemPlayerInput()
         {
@@ -25,6 +26,8 @@ namespace ConceptDemo.Player
 
             _rollAction = new InputAction("Roll", InputActionType.Button, "<Keyboard>/leftShift");
             _rollAction.AddBinding("<Keyboard>/rightShift");
+
+            _attackAction = new InputAction("Attack", InputActionType.Button, "<Mouse>/leftButton");
         }
 
         /// <summary>小於此值的軸輸入視為 0。</summary>
@@ -35,6 +38,7 @@ namespace ConceptDemo.Player
             _moveAction.Enable();
             _jumpAction.Enable();
             _rollAction.Enable();
+            _attackAction.Enable();
         }
 
         public void Disable()
@@ -42,13 +46,18 @@ namespace ConceptDemo.Player
             _moveAction.Disable();
             _jumpAction.Disable();
             _rollAction.Disable();
+            _attackAction.Disable();
         }
 
         public PlayerInputFrame Read()
         {
             float axis = _moveAction.ReadValue<float>();
             int move = Mathf.Abs(axis) >= AxisDeadzone ? (int)Mathf.Sign(axis) : 0;
-            return new PlayerInputFrame(move, _jumpAction.WasPressedThisFrame(), _rollAction.WasPressedThisFrame());
+            return new PlayerInputFrame(
+                move,
+                _jumpAction.WasPressedThisFrame(),
+                _rollAction.WasPressedThisFrame(),
+                _attackAction.WasPressedThisFrame());
         }
 
         public void Dispose()
@@ -56,6 +65,7 @@ namespace ConceptDemo.Player
             _moveAction.Dispose();
             _jumpAction.Dispose();
             _rollAction.Dispose();
+            _attackAction.Dispose();
         }
     }
 }

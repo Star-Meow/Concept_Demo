@@ -104,7 +104,7 @@
 | `Assets/_Project/Art/Sprites/<分類>/<名稱>/<動作>/` | 切好、要匯入 Unity 的 PNG 影格。例：`Art/Sprites/Characters/Player/Idle/` |
 | `Assets/_Project/Art/Animations/<名稱>/` | 動畫 clip（`<動作>.anim`）與 Animator Controller。例：`Art/Animations/Player/Idle.anim` |
 
-- 資料夾名稱用 PascalCase；影格檔名為 `<名稱>_<動作>_<兩位數影格編號>.png`，編號從 `00` 開始，例如 `Player_Idle_00.png`。動作名稱對應 Animator 狀態（Idle、Walk、Sprint、Jump、Fall、Roll）。
+- 資料夾名稱用 PascalCase；影格檔名為 `<名稱>_<動作>_<兩位數影格編號>.png`，編號從 `00` 開始，例如 `Player_Idle_00.png`。動作名稱對應 Animator 狀態（Idle、Walk、Sprint、Jump、Fall、Roll、Attack）。
 - 每個動作的影格放在各自的資料夾，不要混放；同一角色所有影格的畫布大小一致，角色在畫布中的位置固定，播放時才不會跳動。
 - Sprite 匯入設定：Texture Type 為 Sprite（Single）、Pivot 為 Bottom Center（對齊角色腳底的原點）。同一角色所有影格的 Pixels Per Unit 一致，換算後角色身高約 1 單位；像素風素材用 Point filter、不壓縮。
 - 切割時記下原始影格時間（GIF 每格的延遲），換算成動畫 clip 的影格率，寫在該需求文件裡。

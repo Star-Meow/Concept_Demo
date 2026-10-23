@@ -8,5 +8,6 @@ namespace ConceptDemo.Player
         Jump,
         Fall,
         Roll,
+        Attack,
     }
 }

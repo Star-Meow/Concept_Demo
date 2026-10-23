@@ -5,6 +5,7 @@ namespace ConceptDemo.Player
     {
         private bool _jumpQueued;
         private bool _rollQueued;
+        private bool _attackQueued;
 
         /// <summary>按住的方向：-1、0、1。</summary>
         public int MoveDirection { get; set; }
@@ -21,11 +22,18 @@ namespace ConceptDemo.Player
             _rollQueued = true;
         }
 
+        /// <summary>下一次 Read 回報按下 Attack。</summary>
+        public void PressAttack()
+        {
+            _attackQueued = true;
+        }
+
         public PlayerInputFrame Read()
         {
-            var frame = new PlayerInputFrame(MoveDirection, _jumpQueued, _rollQueued);
+            var frame = new PlayerInputFrame(MoveDirection, _jumpQueued, _rollQueued, _attackQueued);
             _jumpQueued = false;
             _rollQueued = false;
+            _attackQueued = false;
             return frame;
         }
     }

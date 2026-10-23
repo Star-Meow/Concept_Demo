@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ConceptDemo.Player
 {
     /// <summary>
-    /// 玩家移動：Move、Sprint、Jump、Roll、Respawn。
+    /// 玩家移動：Move、Sprint、Jump、Roll、Attack、Respawn。
     /// 輸入在 Update 鎖存，在 FixedUpdate 消耗。
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
@@ -19,6 +19,7 @@ namespace ConceptDemo.Player
         private static readonly int IsGroundedHash = Animator.StringToHash("IsGrounded");
         private static readonly int IsSprintingHash = Animator.StringToHash("IsSprinting");
         private static readonly int IsRollingHash = Animator.StringToHash("IsRolling");
+        private static readonly int IsAttackingHash = Animator.StringToHash("IsAttacking");
 
         [SerializeField] private PlayerMovementSettings _settings = new PlayerMovementSettings();
 
@@ -31,20 +32,13 @@ namespace ConceptDemo.Player
         [SerializeField] private Animator _animator;
         [SerializeField] private LayerMask _groundLayers;
 
-        [Header("Placeholder Colors")]
-        [SerializeField] private Color _idleColor = new Color(0.95f, 0.95f, 0.95f);
-        [SerializeField] private Color _walkColor = new Color(0.4f, 0.85f, 0.4f);
-        [SerializeField] private Color _sprintColor = new Color(1f, 0.6f, 0.15f);
-        [SerializeField] private Color _jumpColor = new Color(0.3f, 0.85f, 1f);
-        [SerializeField] private Color _fallColor = new Color(0.55f, 0.5f, 1f);
-        [SerializeField] private Color _rollColor = new Color(1f, 0.35f, 0.7f);
-
         private Rigidbody2D _rigidbody;
         private BoxCollider2D _collider;
         private InputSystemPlayerInput _defaultInput;
         private IPlayerInputSource _inputSource;
 
         private readonly RollMotion _roll = new RollMotion();
+        private readonly AttackTimer _attack = new AttackTimer();
         private SprintIntentDetector _sprint;
         private HorizontalMotion _horizontal;
 
@@ -52,6 +46,7 @@ namespace ConceptDemo.Player
         private int _moveInput;
         private bool _jumpPressedLatched;
         private bool _rollPressedLatched;
+        private bool _attackPressedLatched;
 
         private float _lastGroundedTime = float.NegativeInfinity;
         private float _lastJumpPressedTime = float.NegativeInfinity;
@@ -68,6 +63,7 @@ namespace ConceptDemo.Player
         public int Facing { get; private set; } = 1;
         public bool IsSprinting => _sprint != null && _sprint.IsSprinting;
         public float SprintHoldTime => _sprint != null ? _sprint.HoldTime : 0f;
+        public bool IsAttacking => _attack.IsActive;
         public float RollCooldownRemaining => Mathf.Max(0f, _rollCooldownEndTime - Time.time);
         public float ColliderWidth => _collider.size.x * Mathf.Abs(transform.lossyScale.x);
         public float VisualRotationZ => _visual != null ? _visual.localEulerAngles.z : 0f;
@@ -133,8 +129,13 @@ namespace ConceptDemo.Player
                 _rollPressedLatched = true;
             }
 
-            // 翻滾中不累積 Sprint，翻滾結束後才重新開始計時。
-            if (!_roll.IsActive)
+            if (input.AttackPressed)
+            {
+                _attackPressedLatched = true;
+            }
+
+            // 翻滾、揮砍中不累積 Sprint，結束後才重新開始計時。
+            if (!_roll.IsActive && !_attack.IsActive)
             {
                 _sprint.Configure(_settings.SprintHoldTime, _settings.DoubleTapWindow);
                 _sprint.Tick(Time.time, _moveInput);
@@ -157,6 +158,7 @@ namespace ConceptDemo.Player
 
             bool jumpPressed = ConsumeLatch(ref _jumpPressedLatched);
             bool rollPressed = ConsumeLatch(ref _rollPressedLatched);
+            bool attackPressed = ConsumeLatch(ref _attackPressedLatched);
 
             bool rolledThisStep = false;
             if (_roll.IsActive)
@@ -176,8 +178,26 @@ namespace ConceptDemo.Player
                 }
             }
 
-            // 翻滾中的 Jump 按壓直接丟棄，不進 buffer。
-            if (jumpPressed && !rolledThisStep)
+            bool attackingThisStep = false;
+            if (_attack.IsActive)
+            {
+                if (!IsGrounded)
+                {
+                    EndAttack();
+                }
+                else
+                {
+                    _attack.Tick(deltaTime);
+                    attackingThisStep = true;
+                    if (!_attack.IsActive)
+                    {
+                        EndAttack();
+                    }
+                }
+            }
+
+            // 翻滾、揮砍中的 Jump 按壓直接丟棄，不進 buffer。
+            if (jumpPressed && !rolledThisStep && !attackingThisStep)
             {
                 _lastJumpPressedTime = now;
             }
@@ -190,13 +210,22 @@ namespace ConceptDemo.Player
                     _hasRollExitVelocity = false;
                 }
 
+                // 揮砍中忽略 Move，以地面減速停下。
                 float speedBeforeMove = velocity.x;
-                velocity = ApplyMoveAndJump(now, velocity, deltaTime);
+                int move = attackingThisStep ? 0 : _moveInput;
+                velocity = ApplyMoveAndJump(now, velocity, deltaTime, move);
 
-                if (rollPressed && CanRoll(now))
+                if (rollPressed && !attackingThisStep && CanRoll(now))
                 {
                     StartRoll(speedBeforeMove);
                     velocity.x = _roll.Tick(deltaTime);
+                }
+
+                // 同一步同時按下時 Jump、Roll 優先：起跳或開始翻滾後就不符合揮砍條件。
+                // 開始的這一步不計時，揮砍狀態才會剛好維持 attackDuration。
+                if (attackPressed && CanAttack())
+                {
+                    StartAttack();
                 }
             }
 
@@ -209,7 +238,7 @@ namespace ConceptDemo.Player
             UpdatePresentation(velocity);
         }
 
-        private Vector2 ApplyMoveAndJump(float now, Vector2 velocity, float deltaTime)
+        private Vector2 ApplyMoveAndJump(float now, Vector2 velocity, float deltaTime, int move)
         {
             float speed = _sprint.IsSprinting ? _settings.SprintSpeed : _settings.WalkSpeed;
             _horizontal.Configure(
@@ -217,8 +246,8 @@ namespace ConceptDemo.Player
                 _settings.GroundDeceleration,
                 _settings.AirAcceleration,
                 _settings.AirDeceleration);
-            velocity.x = _horizontal.Step(velocity.x, _moveInput, speed, IsGrounded, deltaTime);
-            Facing = HorizontalMotion.ResolveFacing(Facing, _moveInput, velocity.x, IsGrounded);
+            velocity.x = _horizontal.Step(velocity.x, move, speed, IsGrounded, deltaTime);
+            Facing = HorizontalMotion.ResolveFacing(Facing, move, velocity.x, IsGrounded);
 
             bool buffered = now - _lastJumpPressedTime <= _settings.JumpBufferTime;
             bool inCoyote = now - _lastGroundedTime <= _settings.CoyoteTime;
@@ -300,7 +329,25 @@ namespace ConceptDemo.Player
             _hasRollExitVelocity = true;
         }
 
-        /// <summary>回到 SpawnPoint，並重置速度、狀態、面向、Roll 冷卻、Visual 旋轉與 Sprint 偵測器。</summary>
+        private bool CanAttack()
+        {
+            return IsGrounded && !_roll.IsActive && !_attack.IsActive;
+        }
+
+        private void StartAttack()
+        {
+            _sprint.Reset();
+            _lastJumpPressedTime = float.NegativeInfinity;
+            _attack.Begin(_settings.AttackDuration);
+        }
+
+        private void EndAttack()
+        {
+            _attack.Cancel();
+            _sprint.Reset();
+        }
+
+        /// <summary>回到 SpawnPoint，並重置速度、狀態、面向、Roll 冷卻、揮砍、Visual 旋轉與 Sprint 偵測器。</summary>
         public void Respawn()
         {
             Vector2 position = _spawnPoint != null ? (Vector2)_spawnPoint.position : _fallbackSpawnPosition;
@@ -312,6 +359,7 @@ namespace ConceptDemo.Player
             _roll.Cancel();
             _hasRollExitVelocity = false;
             _rollCooldownEndTime = 0f;
+            _attack.Cancel();
             _sprint.Reset();
             ResetVisualRotation();
 
@@ -322,6 +370,7 @@ namespace ConceptDemo.Player
             _lastJumpPressedTime = float.NegativeInfinity;
             _jumpPressedLatched = false;
             _rollPressedLatched = false;
+            _attackPressedLatched = false;
 
             State = PlayerState.Idle;
             UpdatePresentation(Vector2.zero);
@@ -334,6 +383,10 @@ namespace ConceptDemo.Player
             if (_roll.IsActive)
             {
                 State = PlayerState.Roll;
+            }
+            else if (_attack.IsActive)
+            {
+                State = PlayerState.Attack;
             }
             else if (!IsGrounded)
             {
@@ -362,7 +415,7 @@ namespace ConceptDemo.Player
 
             if (_spriteRenderer != null)
             {
-                _spriteRenderer.color = GetStateColor(State);
+                _spriteRenderer.flipX = Facing < 0;
             }
 
             if (_animator != null && _animator.runtimeAnimatorController != null)
@@ -372,6 +425,7 @@ namespace ConceptDemo.Player
                 _animator.SetBool(IsGroundedHash, IsGrounded);
                 _animator.SetBool(IsSprintingHash, _sprint.IsSprinting);
                 _animator.SetBool(IsRollingHash, _roll.IsActive);
+                _animator.SetBool(IsAttackingHash, _attack.IsActive);
             }
         }
 
@@ -380,25 +434,6 @@ namespace ConceptDemo.Player
             if (_visual != null)
             {
                 _visual.localRotation = Quaternion.identity;
-            }
-        }
-
-        private Color GetStateColor(PlayerState state)
-        {
-            switch (state)
-            {
-                case PlayerState.Walk:
-                    return _walkColor;
-                case PlayerState.Sprint:
-                    return _sprintColor;
-                case PlayerState.Jump:
-                    return _jumpColor;
-                case PlayerState.Fall:
-                    return _fallColor;
-                case PlayerState.Roll:
-                    return _rollColor;
-                default:
-                    return _idleColor;
             }
         }
 

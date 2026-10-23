@@ -39,6 +39,10 @@ namespace ConceptDemo.Player
         [SerializeField, Range(0.05f, RollMotion.MaxDuration)] private float _rollDuration = 0.3f;
         [SerializeField, Min(0f)] private float _rollCooldown = 0.3f;
 
+        [Header("Attack")]
+        [Tooltip("揮砍持續時間，對應 Attack clip 長度")]
+        [SerializeField, Min(0.05f)] private float _attackDuration = 0.5f;
+
         [Header("Respawn")]
         [Tooltip("掉到這個高度以下就重生；預設為畫面底部再減一個身高")]
         [SerializeField] private float _killY = -8f;
@@ -60,6 +64,7 @@ namespace ConceptDemo.Player
         public float RollDistanceInBodyWidths => _rollDistanceInBodyWidths;
         public float RollDuration => _rollDuration;
         public float RollCooldown => _rollCooldown;
+        public float AttackDuration => _attackDuration;
         public float KillY => _killY;
     }
 }

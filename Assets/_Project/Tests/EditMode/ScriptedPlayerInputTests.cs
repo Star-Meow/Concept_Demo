@@ -51,12 +51,22 @@ namespace ConceptDemo.Tests
         }
 
         [Test]
+        public void PressAttack_IsReportedOnce()
+        {
+            _input.PressAttack();
+
+            Assert.IsTrue(_input.Read().AttackPressed);
+            Assert.IsFalse(_input.Read().AttackPressed);
+        }
+
+        [Test]
         public void NoPress_ReportsNothing()
         {
             PlayerInputFrame frame = _input.Read();
 
             Assert.IsFalse(frame.JumpPressed);
             Assert.IsFalse(frame.RollPressed);
+            Assert.IsFalse(frame.AttackPressed);
         }
     }
 }

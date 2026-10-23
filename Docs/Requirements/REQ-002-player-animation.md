@@ -2,7 +2,7 @@
 
 | 項目 | 內容 |
 | --- | --- |
-| 狀態 | 確認 |
+| 狀態 | 實作中 |
 | 建立日期 | 2026-10-23 |
 | 相關需求 | [REQ-001](REQ-001-player-movement.md) |
 
@@ -84,7 +84,7 @@ Player                  根物件（Rigidbody2D、BoxCollider2D、PlayerControll
 ### 文件
 
 - `AGENTS.md`「美術素材」的動作名稱清單加入 `Attack`。
-- `README.md` 結構說明加入 `ArtSource/`、`Tools/`（若尚未列出）。
+- `README.md` 結構說明已列出 `ArtSource/`、`Tools/`，不需修改。
 
 ## 驗收條件
 
@@ -130,3 +130,17 @@ Player                  根物件（Rigidbody2D、BoxCollider2D、PlayerControll
 - Visual 結構採「旋轉節點 + Sprite 子物件」，讓 Pivot 在腳底、Roll 仍繞身體中心旋轉。
 - 揮砍開始時以減速停下（不即停）。
 - 只用滑鼠左鍵，不加備用按鍵。
+
+**實作時補充（只記錄，不改需求）**
+
+- `Tools/split_gif.ps1` 只用 ASCII：Windows PowerShell 5.1 讀取沒有 BOM 的 UTF-8 腳本時會用系統字碼頁，中文註解會讓解析失敗；`.editorconfig` 要求 UTF-8（無 BOM），所以腳本內改用英文。
+- 匯入設定另外設定 Mesh Type Full Rect、Wrap Mode Clamp、Alpha Is Transparency（像素風 Sprite 的一般設定）。
+- Sprite clip 只放每格的關鍵影格，Unity 會在最後一格後自動補一格的長度：`Idle.anim` 0.4 s、`Attack.anim` 0.5 s。
+- 揮砍開始的物理步不計時，揮砍狀態剛好維持 25 個物理步（0.5 s）。
+- 同一個物理步同時按 Attack 與 Jump 或 Roll 時，Jump、Roll 優先（起跳、開始翻滾後就不符合揮砍條件）。
+
+**已知事項（只回報，不修）**
+
+- Animator 在 Update 播放、狀態在 FixedUpdate 判定，畫面上的影格比狀態晚約一幀：`Player_Attack_00` 顯示約 0.12 s、`Player_Attack_04` 約 0.08 s，其餘每格 0.1 s。
+- Walk、Sprint、Idle 都播 `Idle.anim`，但它們是不同的 Animator 狀態，切換時 Idle 動畫會從第一格重新播放。
+- 鏡頭 size 7 時角色約 1 單位高，在 16:9 畫面上看起來偏小。

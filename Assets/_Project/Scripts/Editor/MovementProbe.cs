@@ -16,7 +16,7 @@ namespace ConceptDemo.Editor
     /// </summary>
     /// <example>
     /// MovementProbe.Run("walk", "0 respawn; 0.5 move 1; 1.5 move 0", 2.5f);
-    /// 指令：respawn、move -1|0|1、jump、roll、teleport x y、pause（暫停 Play Mode 並結束量測，供截圖）。
+    /// 指令：respawn、move -1|0|1、jump、roll、attack、teleport x y、pause（暫停 Play Mode 並結束量測，供截圖）。
     /// </example>
     public static class MovementProbe
     {
@@ -189,6 +189,7 @@ namespace ConceptDemo.Editor
         {
             private readonly ScriptedPlayerInput _input = new ScriptedPlayerInput();
             private readonly Rigidbody2D _rigidbody;
+            private readonly SpriteRenderer _spriteRenderer;
             private readonly StringBuilder _csv = new StringBuilder();
             private readonly int _previousCaptureFramerate;
             private readonly bool _previousRunInBackground;
@@ -202,6 +203,7 @@ namespace ConceptDemo.Editor
                 Duration = duration;
                 Player = player;
                 _rigidbody = player.GetComponent<Rigidbody2D>();
+                _spriteRenderer = player.GetComponentInChildren<SpriteRenderer>();
 
                 _previousCaptureFramerate = Time.captureFramerate;
                 _previousRunInBackground = Application.runInBackground;
@@ -210,7 +212,7 @@ namespace ConceptDemo.Editor
                 player.SetInputSource(_input);
 
                 StartTime = Time.time;
-                _csv.AppendLine("frame,t,x,y,vx,vy,state,grounded,facing,sprinting,sprintHold,rollCooldown,rotZ,move");
+                _csv.AppendLine("frame,t,x,y,vx,vy,state,grounded,facing,sprinting,sprintHold,rollCooldown,rotZ,move,attacking,sprite,flipX,spriteBottom");
             }
 
             public List<Step> Steps { get; }
@@ -235,6 +237,9 @@ namespace ConceptDemo.Editor
                         break;
                     case "roll":
                         _input.PressRoll();
+                        break;
+                    case "attack":
+                        _input.PressAttack();
                         break;
                     case "teleport":
                         if (step.Args.Length >= 2)
@@ -280,7 +285,11 @@ namespace ConceptDemo.Editor
                     .Append(F(Player.SprintHoldTime)).Append(',')
                     .Append(F(Player.RollCooldownRemaining)).Append(',')
                     .Append(F(Player.VisualRotationZ)).Append(',')
-                    .Append(_input.MoveDirection)
+                    .Append(_input.MoveDirection).Append(',')
+                    .Append(Player.IsAttacking ? 1 : 0).Append(',')
+                    .Append(_spriteRenderer != null && _spriteRenderer.sprite != null ? _spriteRenderer.sprite.name : "").Append(',')
+                    .Append(_spriteRenderer != null && _spriteRenderer.flipX ? 1 : 0).Append(',')
+                    .Append(_spriteRenderer != null ? F(_spriteRenderer.bounds.min.y - Player.transform.position.y) : "")
                     .AppendLine();
             }
 
