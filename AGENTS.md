@@ -57,6 +57,7 @@
 - `Packages/manifest.json`、`Packages/packages-lock.json`
 - `ProjectSettings/`
 - 根目錄設定檔：`.gitignore`、`.gitattributes`、`.editorconfig`、`.vsconfig`、`.mcp.json`
+- 原始美術素材 `ArtSource/` 與素材處理腳本 `Tools/`（見「美術素材」）
 - 文件：`AGENTS.md`、`CLAUDE.md`、`README.md`，以及之後新增的文件（統一放在 `Docs/`）。專案的環境、設定或結構有變動時，同步更新 `README.md`。
 
 不納入 git（由 `.gitignore` 過濾）：
@@ -91,6 +92,24 @@
 - 空資料夾放一個 `.gitkeep`，資料夾才會被 git 保存；資料夾裡有其他檔案後就刪掉 `.gitkeep`。
 - 第三方資源放在 `Assets/` 下各自的資料夾，不放進 `_Project/`。
 - 新場景要加到 Build Settings 時，先向使用者確認。
+
+## 美術素材
+
+原始素材與匯入 Unity 的成品分開放：
+
+| 路徑 | 內容 |
+| --- | --- |
+| `ArtSource/<分類>/<名稱>/` | 原始素材（GIF、PSD、Aseprite 等），不放進 `Assets/`，避免 Unity 匯入。例：`ArtSource/Characters/Player/player_idle.gif` |
+| `Tools/` | 處理素材的腳本（例如把 GIF 切成 PNG），不放進 `Assets/` |
+| `Assets/_Project/Art/Sprites/<分類>/<名稱>/<動作>/` | 切好、要匯入 Unity 的 PNG 影格。例：`Art/Sprites/Characters/Player/Idle/` |
+| `Assets/_Project/Art/Animations/<名稱>/` | 動畫 clip（`<動作>.anim`）與 Animator Controller。例：`Art/Animations/Player/Idle.anim` |
+
+- 資料夾名稱用 PascalCase；影格檔名為 `<名稱>_<動作>_<兩位數影格編號>.png`，編號從 `00` 開始，例如 `Player_Idle_00.png`。動作名稱對應 Animator 狀態（Idle、Walk、Sprint、Jump、Fall、Roll）。
+- 每個動作的影格放在各自的資料夾，不要混放；同一角色所有影格的畫布大小一致，角色在畫布中的位置固定，播放時才不會跳動。
+- Sprite 匯入設定：Texture Type 為 Sprite（Single）、Pivot 為 Bottom Center（對齊角色腳底的原點）。同一角色所有影格的 Pixels Per Unit 一致，換算後角色身高約 1 單位；像素風素材用 Point filter、不壓縮。
+- 切割時記下原始影格時間（GIF 每格的延遲），換算成動畫 clip 的影格率，寫在該需求文件裡。
+- `.gif`、`.png`、`.psd` 由 `.gitattributes` 交給 Git LFS 管理，提交前確認 `git lfs` 可用。
+- 原始素材的來源與授權寫在需求文件；不確定能否使用的素材先向使用者確認。
 
 ## 程式規範
 
