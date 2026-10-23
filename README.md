@@ -37,6 +37,8 @@ git config merge.unityyamlmerge.name "Unity SmartMerge (UnityYAMLMerge)" && git 
 | `Packages/` | 套件清單與鎖定檔 |
 | `ProjectSettings/` | Unity 專案設定 |
 | `Docs/Requirements/` | 需求文件與範本 |
+| `ArtSource/` | 原始美術素材（GIF、PSD 等，不匯入 Unity） |
+| `Tools/` | 素材處理腳本（例如 GIF 切 PNG） |
 | `.editorconfig` | 程式碼格式設定（Rider、Visual Studio 會自動讀取） |
 | `AGENTS.md` | 專案規則（唯一規則來源） |
 | `CLAUDE.md` | 只引用 `AGENTS.md`，供 Claude Code 自動載入 |
